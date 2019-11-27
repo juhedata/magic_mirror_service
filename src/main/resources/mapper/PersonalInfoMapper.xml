@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.juhe.demo.mapper.PersonalInfoMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.juhe.demo.entity.PersonalInfo">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="gender" property="gender"/>
+        <result column="birthday" property="birthday"/>
+        <result column="group_id" property="groupId"/>
+        <result column="employee_no" property="employeeNo"/>
+        <result column="title" property="title"/>
+        <result column="department" property="department"/>
+        <result column="company" property="company"/>
+        <result column="icon" property="icon"/>
+        <result column="note" property="note"/>
+        <result column="create_time" property="createTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, gender, birthday, group_id, employee_no, title, department, company, icon,note, create_time, deleted
+    </sql>
+
+</mapper>

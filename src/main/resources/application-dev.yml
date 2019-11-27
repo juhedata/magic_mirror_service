@@ -1,0 +1,74 @@
+server:
+  port: 8161
+
+spring:
+  redis:
+    port: 6379
+    host:
+  application:
+    name: magic_mirror
+  datasource:
+    username: root
+    url: jdbc:mysql://localhost:3306/magic?useUnicode=true&characterEncoding=utf-8
+    password:
+    hikari:
+      minimum-idle: 6
+      maximum-pool-size: 30
+      connection-timeout: 30000
+    driver-class-name: com.mysql.jdbc.Driver
+
+logging:
+  config: classpath:logback-boot.xml
+  level:
+    root: info
+    com.juhe.demo: debug
+
+baidu:
+  face:
+    groupId:
+    liveness:
+  appId:
+  appKey:
+  secretKey:
+
+arc:
+  face:
+    appId:
+    sdkKey:
+    lib:
+    similarValue:
+
+personal:
+  monitor:
+    expire: 5
+  icon:
+    path: E:/images
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+jasypt:
+  encryptor:
+    password: magic
+mybatis-plus:
+  type-aliases-package: com.juhe.demo.entity
+  mapper-locations: classpath:mapper/*.xml
+
+cache:
+  open: 1
+
+match:
+  threshold:
+
+logback:
+  logstash:
+    ip:
+    port:
+
+excel:
+  export:
+    template:
+      path: /data/魔镜/考勤数据报表模板.xlsx

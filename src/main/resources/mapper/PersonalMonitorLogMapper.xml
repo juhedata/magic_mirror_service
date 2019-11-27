@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.juhe.demo.mapper.PersonalMonitorLogMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.juhe.demo.entity.PersonalMonitorLog">
+        <id column="id" property="id"/>
+        <result column="personal_id" property="personalId"/>
+        <result column="action" property="action"/>
+        <result column="source" property="source"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <resultMap id="MonitorResultMap" type="com.juhe.demo.vo.PersonMonitorInfoVO">
+        <id column="id" property="id"/>
+        <result column="personalId" property="personalId"/>
+        <result column="personalName" property="personalName"/>
+        <result column="monitorTime" property="monitorTime"/>
+        <result column="action" property="action"/>
+        <result column="groupName" property="groupName"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 case t.action when 0 then '进入' else '离开'end as action-->
+    <sql id="Base_Column_List">
+        id, personal_id, action,source, create_time
+    </sql>
+
+    <sql id="CONDITION">
+        <where>
+            <if test="condition.name != null and condition.name != ''">
+                and p.name like '%${condition.name}%'
+            </if>
+            <if test="condition.startTime != null and condition.startTime != ''">
+                and t.create_time &gt;= '${condition.startTime}'
+            </if>
+            <if test="condition.endTime != null and condition.endTime != ''">
+                and t.create_time &lt;= '${condition.endTime}'
+            </if>
+            <if test="condition.action != null and condition.action != -1">
+                and t.action = ${condition.action}
+            </if>
+            <if test="condition.groupId != null and condition.groupId != -1">
+                and p.group_id = ${condition.groupId}
+            </if>
+        </where>
+    </sql>
+
+    <select id="countPersonMonitorInfo" parameterType="com.juhe.demo.transfer.PersonMonitorConditionBO"
+        resultType="java.lang.Long">
+        select count(*) from personal_monitor_log t left join personal_info p on t.personal_id = p.id left join
+        group_name n on p.group_id = n.id
+        <include refid="CONDITION"></include>
+    </select>
+
+    <select id="listPersonMonitorInfo" parameterType="com.juhe.demo.transfer.PersonMonitorConditionBO"
+        resultMap="MonitorResultMap">
+        select t.id,p.id as personalId,p.name as personalName,date_format(t.create_time,'%Y-%m-%d %H:%i:%s') as
+        monitorTime,t.action,n.name as groupName
+        from personal_monitor_log t left join personal_info p on t.personal_id = p.id
+        left join group_name n on p.group_id = n.id
+        <include refid="CONDITION"></include>
+        order by id desc
+    </select>
+</mapper>

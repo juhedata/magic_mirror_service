@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.juhe.demo.mapper.PersonalMonitorStatictisMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.juhe.demo.entity.PersonalMonitorStatictis">
+        <id column="id" property="id"/>
+        <result column="personal_id" property="personalId"/>
+        <result column="out_count" property="outCount"/>
+        <result column="in_count" property="inCount"/>
+        <result column="stand_time" property="standTime"/>
+        <result column="earliest_time" property="earliestTime"/>
+        <result column="latest_time" property="latestTime"/>
+        <result column="statistics_time" property="statisticsTime"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 SUBSTRING(p.create_time, 12, 5)-->
+    <sql id="Base_Column_List">
+        id, personal_id, out_count, in_count, stand_time, earliest_time, latest_time, statistics_time
+    </sql>
+
+    <select id="getMonitorDiscreteFlow" resultType="com.juhe.demo.vo.DiscreteFlowMonitorVO">
+        SELECT UNIX_TIMESTAMP(p.create_time) * 1000 AS time,
+               p.personal_id                           personalId,
+               p.action
+        FROM personal_monitor_log p
+        WHERE p.create_time >= '${start}'
+          AND p.create_time &lt;= '${end}'
+        order by p.create_time
+    </select>
+
+    <select id="discreteTimeInFlowNum" resultType="com.juhe.demo.vo.DiscreteFlowNumVO">
+        SELECT SUBSTRING(p.create_time, 12, 2) AS time,
+               count(*)                        AS inNum
+        FROM personal_monitor_log p
+        WHERE p.create_time >= '${start}'
+          AND p.create_time &lt;= '${end}'
+          AND p.action = 0
+        GROUP BY SUBSTRING(p.create_time, 12, 2)
+        order by time
+    </select>
+
+    <select id="discreteTimeOutFlowNum" resultType="com.juhe.demo.vo.DiscreteFlowNumVO">
+        SELECT SUBSTRING(p.create_time, 12, 2) AS time,
+               count(*)                        AS outNum
+        FROM personal_monitor_log p
+        WHERE p.create_time >= '${start}'
+          AND p.create_time &lt;= '${end}'
+          AND p.action = 1
+        GROUP BY SUBSTRING(p.create_time, 12, 2)
+        order by time
+    </select>
+
+    <select id="discreteDateFlowNum" resultType="com.juhe.demo.vo.DiscreteFlowNumVO">
+        SELECT RIGHT
+                   (p.statistics_time, 5) AS time,
+               sum(p.in_count)            AS inNum,
+               sum(p.out_count)           AS outNum
+        FROM personal_monitor_statictis p
+        WHERE p.statistics_time >= '${start}'
+          AND p.statistics_time &lt;= '${end}'
+        GROUP BY RIGHT(p.statistics_time, 5)
+        order by time
+    </select>
+
+    <select id="instantRateSummary" resultType="com.juhe.demo.transfer.CommonBO">
+        SELECT a.*
+        FROM (
+                 SELECT count(action) as summary
+                 FROM personal_monitor_log
+                 WHERE action = 0
+                   AND create_time >= '${start}'
+                   AND create_time &lt;= '${end}'
+                 UNION ALL
+                 SELECT count(action) as summary
+                 FROM personal_monitor_log
+                 WHERE action = 1
+                   AND create_time >= '${start}'
+                   AND create_time &lt;= '${end}'
+             ) a
+    </select>
+
+    <select id="flowStatistics" resultType="com.juhe.demo.transfer.CommonBO">
+        SELECT a.*
+        FROM (
+                 SELECT ifnull((sum(in_count) + sum(out_count)), 0) as summary
+                 FROM personal_monitor_statictis
+                 WHERE statistics_time >= '${start}'
+                   AND statistics_time &lt;= '${end}'
+                 UNION ALL
+                 SELECT count(personal_id)
+                 FROM personal_monitor_statictis
+                 WHERE in_count > 0
+                   AND statistics_time >= '${start}'
+                   AND statistics_time &lt;= '${end}'
+                 UNION ALL
+                 SELECT count(personal_id) AS outPersons
+                 FROM personal_monitor_statictis
+                 WHERE out_count > 0
+                   AND statistics_time >= '${start}'
+                   AND statistics_time &lt;= '${end}'
+                 UNION ALL
+                 SELECT count(s.personal_id) AS clockInPersons
+                 FROM personal_monitor_statictis s,
+                      personal_info p,
+                      group_name g
+                 WHERE p.id = s.personal_id
+                   AND p.group_id = g.id
+                   AND s.in_count > 0
+                   AND g.NAME = '${groupName}'
+                   AND statistics_time >= '${start}'
+                   AND statistics_time &lt;= '${end}'
+                 UNION ALL
+                 SELECT count(s.personal_id) AS visitors
+                 FROM personal_monitor_statictis s,
+                      personal_info p,
+                      group_name g
+                 WHERE p.id = s.personal_id
+                   AND p.group_id = g.id
+                   AND s.in_count > 0
+                   AND g.NAME != '${groupName}'
+                   AND statistics_time >= '${start}'
+                   AND statistics_time &lt;= '${end}'
+                 UNION ALL
+                 SELECT ifnull(convert(sum(stand_time) / count(personal_id) / 60, decimal(12, 0)), 0)
+                 FROM personal_monitor_statictis
+                 WHERE stand_time IS NOT NULL
+                   AND statistics_time >= '${start}'
+                   AND statistics_time &lt;= '${end}'
+             ) a
+    </select>
+
+    <select id="summaryPersonMonitorInfo" parameterType="com.juhe.demo.transfer.PersonMonitorConditionBO"
+        resultType="com.juhe.demo.vo.PersonMonitorSummaryVO">
+        SELECT
+        CASE
+        #{condition.action}
+        WHEN 1 THEN
+        0 ELSE ifnull(sum( t.in_count ),0)
+        END AS inNum,
+        CASE
+        #{condition.action}
+        WHEN 0 THEN
+        0 ELSE ifnull(sum( t.out_count ),0)
+        END AS outNum,
+        CASE
+        #{condition.action}
+        WHEN 0 THEN
+        0
+        WHEN 1 THEN
+        0 ELSE ifnull(convert(sum(t.stand_time) / 60, decimal(12,0)), 0)
+        END AS standTime
+        FROM
+        personal_monitor_statictis t
+        LEFT JOIN personal_info p ON t.personal_id = p.id
+        <where>
+            1=1
+            <if test="condition.name != null and condition.name != ''">
+                and p.name like '%${condition.name}%'
+            </if>
+            <if test="condition.startTime != null and condition.startTime != ''">
+                and t.statistics_time &gt;= SUBSTRING('${condition.startTime}',1,10)
+            </if>
+            <if test="condition.endTime != null and condition.endTime != ''">
+                and t.statistics_time &lt;= SUBSTRING('${condition.endTime}',1,10)
+            </if>
+            <if test="condition.groupId != null and condition.groupId != -1">
+                and p.group_id = '${condition.groupId}'
+            </if>
+        </where>
+    </select>
+
+</mapper>
